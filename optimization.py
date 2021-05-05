@@ -22,7 +22,7 @@ import re
 import tensorflow as tf
 
 
-def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
+def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu, optimizer_type):
   """Creates an optimizer training op."""
   global_step = tf.train.get_or_create_global_step()
 
@@ -53,16 +53,28 @@ def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
     learning_rate = (
         (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
 
-  # It is recommended that you use this optimizer for fine tuning, since this
-  # is how the model was trained (note that the Adam m/v variables are NOT
-  # loaded from init_checkpoint.)
-  optimizer = AdamWeightDecayOptimizer(
-      learning_rate=learning_rate,
-      weight_decay_rate=0.01,
-      beta_1=0.9,
-      beta_2=0.999,
-      epsilon=1e-6,
-      exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"])
+  if optimizer_type == "Adam":
+    # It is recommended that you use this optimizer for fine tuning, since this
+    # is how the model was trained (note that the Adam m/v variables are NOT
+    # loaded from init_checkpoint.)
+    optimizer = AdamWeightDecayOptimizer(
+        learning_rate=learning_rate,
+        weight_decay_rate=0.01,
+        beta_1=0.9,
+        beta_2=0.999,
+        epsilon=1e-6,
+        exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"])
+  # elif optimizer_type == "RMSProp":
+  else:
+    optimizer = tf.train.RMSPropOptimizer(
+        learning_rate,
+        decay=0.01,
+        momentum=0.01,
+        epsilon=1e-6,
+        use_locking=False,
+        centered=True,
+        name='RMSProp'
+    )
 
   if use_tpu:
     optimizer = tf.contrib.tpu.CrossShardOptimizer(optimizer)
@@ -76,10 +88,11 @@ def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
   train_op = optimizer.apply_gradients(
       zip(grads, tvars), global_step=global_step)
 
-  # Normally the global step update is done inside of `apply_gradients`.
-  # However, `AdamWeightDecayOptimizer` doesn't do this. But if you use
-  # a different optimizer, you should probably take this line out.
-  new_global_step = global_step + 1
+  if optimizer_type == "Adam":
+    # Normally the global step update is done inside of `apply_gradients`.
+    # However, `AdamWeightDecayOptimizer` doesn't do this. But if you use
+    # a different optimizer, you should probably take this line out.
+    new_global_step = global_step + 1
   train_op = tf.group(train_op, [global_step.assign(new_global_step)])
   return train_op
 
