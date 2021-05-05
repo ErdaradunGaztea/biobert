@@ -389,7 +389,7 @@ def create_model(bert_config, is_training, input_ids, input_mask,
         
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
-                     use_one_hot_embeddings):
+                     use_one_hot_embeddings, optimizer_type):
     def model_fn(features, labels, mode, params):
         tf.logging.info("*** Features ***")
         for name in sorted(features.keys()):
@@ -428,7 +428,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         output_spec = None
         if mode == tf.estimator.ModeKeys.TRAIN:
             train_op = optimization.create_optimizer(
-                total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
+                total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu, optimizer_type)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
                 loss=total_loss,
@@ -526,7 +526,8 @@ def main(_):
         num_train_steps=num_train_steps,
         num_warmup_steps=num_warmup_steps,
         use_tpu=FLAGS.use_tpu,
-        use_one_hot_embeddings=FLAGS.use_tpu)
+        use_one_hot_embeddings=FLAGS.use_tpu,
+        optimizer_type=FLAGS.optimizer)
 
     estimator = tf.contrib.tpu.TPUEstimator(
         use_tpu=FLAGS.use_tpu,
