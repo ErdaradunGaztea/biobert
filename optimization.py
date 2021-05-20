@@ -69,7 +69,7 @@ def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu, 
     optimizer = tf.train.RMSPropOptimizer(
         learning_rate,
         decay=0.01,
-        momentum=0.01,
+        momentum=0.9,
         epsilon=1e-6,
         use_locking=False,
         centered=True,
