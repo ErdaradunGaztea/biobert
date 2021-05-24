@@ -417,15 +417,16 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 scaffold_fn = tpu_scaffold
             else:
                 tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
-        tf.logging.info("**** Trainable Variables ****")
+        # tf.logging.info("**** Trainable Variables ****")
 
-        for var in tvars:
-            init_string = ""
-            if var.name in initialized_variable_names:
-                init_string = ", *INIT_FROM_CKPT*"
-            tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                            init_string)
+        # for var in tvars:
+        #     init_string = ""
+        #     if var.name in initialized_variable_names:
+        #         init_string = ", *INIT_FROM_CKPT*"
+        #     tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+        #                     init_string)
         output_spec = None
+        logging_hook = tf.train.LoggingTensorHook({"loss": total_loss}, every_n_iter=10)
         if mode == tf.estimator.ModeKeys.TRAIN:
             train_op = optimization.create_optimizer(
                 total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu, optimizer_type)
@@ -433,6 +434,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 mode=mode,
                 loss=total_loss,
                 train_op=train_op,
+                training_hooks=[logging_hook],
                 scaffold_fn=scaffold_fn)
         elif mode == tf.estimator.ModeKeys.EVAL:
             
@@ -651,6 +653,8 @@ if __name__ == "__main__":
     flags.mark_flag_as_required("vocab_file")
     flags.mark_flag_as_required("bert_config_file")
     flags.mark_flag_as_required("output_dir")
+    logger = tf.get_logger()
+    logger.propagate = False
     tf.app.run()
 
 
