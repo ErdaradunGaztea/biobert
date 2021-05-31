@@ -391,9 +391,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
                      use_one_hot_embeddings, optimizer_type):
     def model_fn(features, labels, mode, params):
-        tf.logging.info("*** Features ***")
-        for name in sorted(features.keys()):
-            tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
+        # tf.logging.info("*** Features ***")
+        # for name in sorted(features.keys()):
+        #     tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
         input_ids = features["input_ids"]
         input_mask = features["input_mask"]
         segment_ids = features["segment_ids"]
@@ -426,7 +426,10 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         #     tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
         #                     init_string)
         output_spec = None
-        logging_hook = tf.train.LoggingTensorHook({"loss": total_loss}, every_n_iter=10)
+        n_iter = int(num_train_steps/FLAGS.num_train_epochs)
+        logging_hook = tf.estimator.LoggingTensorHook({"loss": total_loss}, every_n_iter=n_iter)
+        tf.summary.scalar("loss", total_loss)
+        summary_hook = tf.estimator.SummarySaverHook(save_steps=n_iter, output_dir=FLAGS.output_dir, scaffold=tf.train.Scaffold(summary_op=tf.summary.merge_all()))
         if mode == tf.estimator.ModeKeys.TRAIN:
             train_op = optimization.create_optimizer(
                 total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu, optimizer_type)
@@ -434,7 +437,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 mode=mode,
                 loss=total_loss,
                 train_op=train_op,
-                training_hooks=[logging_hook],
+                training_hooks=[logging_hook, summary_hook],
                 scaffold_fn=scaffold_fn)
         elif mode == tf.estimator.ModeKeys.EVAL:
             
@@ -509,7 +512,7 @@ def main(_):
             iterations_per_loop=FLAGS.iterations_per_loop,
             num_shards=FLAGS.num_tpu_cores,
             per_host_input_for_training=is_per_host))
-
+    run_config.replace(log_step_count_steps=None)
     train_examples = None
     num_train_steps = None
     num_warmup_steps = None
