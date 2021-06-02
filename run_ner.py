@@ -429,7 +429,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         n_iter = int(num_train_steps/FLAGS.num_train_epochs)
         logging_hook = tf.estimator.LoggingTensorHook({"loss": total_loss}, every_n_iter=n_iter)
         tf.summary.scalar("loss", total_loss)
-        summary_hook = tf.estimator.SummarySaverHook(save_steps=n_iter, output_dir=FLAGS.output_dir, scaffold=tf.train.Scaffold(summary_op=tf.summary.merge_all()))
+        summary_hook = tf.estimator.SummarySaverHook(save_steps=1, output_dir=FLAGS.output_dir, scaffold=tf.train.Scaffold(summary_op=tf.summary.merge_all()))
         if mode == tf.estimator.ModeKeys.TRAIN:
             train_op = optimization.create_optimizer(
                 total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu, optimizer_type)
